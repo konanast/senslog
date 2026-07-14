@@ -1,97 +1,110 @@
 # senslog
 
-Flexible, modular Arduino Pro Mini data logger firmware for hardware variants that share a microSD logger but may use different sensor combinations.
+Production-oriented Arduino Pro Mini modular data logger firmware. The project targets small AVR boards with limited SRAM and flash, a mandatory microSD module, optional DS3231/DS1307 RTC, and compile-time-selected sensor presets.
 
 ## Recommended architecture
 
-Use a compile-time configured table of measurement descriptors plus small sensor read functions:
+The firmware uses a low-memory, compile-time modular architecture:
 
-| Option | Practical result on Arduino Pro Mini |
+- `Config.h` selects one preset and enables only the required sensor adapters.
+- `presets/*.h` provide ready-to-build configurations.
+- `Sensors.*` owns sensor-specific code and independent update intervals.
+- `Timestamp.*` provides DS3231, DS1307, or no-RTC uptime timestamps.
+- `Logger.*` contains the measurement descriptor table and writes CSV directly to the SD file.
+- `SDFileManager.*` creates sequential files such as `LOG0000.CSV`, writes `INFO.TXT`, and provides safe flush/close helpers.
+- `Health.*` reports `Vcc_mV`, battery voltage, free RAM, reset cause, and subsystem counters.
+
+The central CSV logger does not know sensor-specific details. It iterates a `PROGMEM` measurement descriptor table for both the header and every data row, keeping column order identical while avoiding dynamic allocation and Arduino `String`.
+
+## Project structure
+
+```text
+firmware/ModularLogger/
+  ModularLogger.ino
+  Config.h
+  Logger.h / Logger.cpp
+  SDFileManager.h / SDFileManager.cpp
+  Timestamp.h / Timestamp.cpp
+  Sensors.h / Sensors.cpp
+  Health.h / Health.cpp
+  Status.h / Status.cpp
+  SENSOR_PRESETS.md
+  README_BUILD.md
+  presets/
+    Preset_BMP280.h
+    Preset_BME280.h
+    Preset_BME680.h
+    Preset_GY21.h
+    Preset_Mobile_BME280.h
+    Preset_Mobile_BME680.h
+    Preset_WeatherStation.h
+```
+
+## Required presets
+
+Select a preset by editing `LOGGER_PRESET` in `firmware/ModularLogger/Config.h`:
+
+| Preset | Purpose |
 | --- | --- |
-| One fixed struct per hardware variant | Fast and simple, but every variant needs custom logging code and CSV headers easily drift from row order. |
-| Generic classes/interfaces for every sensor | Clean on larger boards, but virtual dispatch and object state add flash/SRAM overhead on ATmega328P. |
-| Callback table of measurement descriptors | Recommended. A single logging loop prints the header and rows from the same table, while each callback prints one field. |
-| Dynamic registry of sensors/measurements | Flexible, but heap allocation and `String` usage are risky on 2 KB SRAM devices. |
-| Compile-time feature flags | Recommended with the callback table. Unused sensors, libraries, columns, and buffers are removed from the build. |
+| `PRESET_BMP280` | Temperature, pressure, altitude logger. |
+| `PRESET_BME280` | Temperature, humidity, pressure, altitude, dew point logger. |
+| `PRESET_BME680` | BME280-style fields plus gas resistance. |
+| `PRESET_GY21` | GY-21 / HTU21D / compatible Si7021 temperature-humidity logger. |
+| `PRESET_MOBILE_BME280` | BME280, MPU6050, GPS, battery monitoring, SD, optional RTC. |
+| `PRESET_MOBILE_BME680` | BME680, MPU6050, GPS, battery monitoring, SD, optional RTC. |
+| `PRESET_WEATHER_STATION` | BME280, pulse anemometer, analogue wind direction, rain gauge, battery monitoring, optional RTC. |
 
-The firmware in [`firmware/ModularLogger/ModularLogger.ino`](firmware/ModularLogger/ModularLogger.ino) uses feature flags such as `USE_BME280`, `USE_RTC`, `USE_ADXL345`, and `USE_GPS`. Enabled measurements are compiled into a single `measurements[]` descriptor table. Header generation and data row generation both iterate over that table, guaranteeing matching column order.
+## Target hardware and wiring
 
-## Files
+Supported boards:
 
-- `firmware/ModularLogger/ModularLogger.ino` - complete example firmware.
+- Arduino Pro Mini 3.3 V / 8 MHz.
+- Arduino Pro Mini 5 V / 16 MHz.
 
-## Example configuration: environmental sensors only
+Use the 3.3 V board when possible because microSD cards are 3.3 V devices. Some low-cost SD modules include regulators or level shifters, but many do not safely tolerate 5 V logic. Confirm the module before connecting it to a 5 V Pro Mini.
 
-For a BME280 environmental logger with RTC, SD card, and one analogue voltage input, use:
+The low-cost SPI microSD module wiring and 4-pin RTC wiring are documented in `firmware/ModularLogger/SENSOR_PRESETS.md`. The microSD CS pin is configurable with `SD_CS_PIN` in `Config.h`.
 
-```cpp
-#define LOG_INTERVAL_MS 10000UL
-#define USE_RTC 1
-#define USE_BME280 1
-#define USE_DHT 0
-#define USE_ANALOG_MV 1
-#define USE_ADXL345 0
-#define USE_GPS 0
-#define USE_WIND 0
-```
+## Measurements
 
-Example CSV output:
+Depending on enabled preset flags, the CSV may include:
 
-```text
-Time,Date,TempC,RH%,Pressure_kPa,Altitude_m,DewPoint_C,mV
-10:25:32 AM,07/05/16,24.11,35.96,96.24,386.44,8.08,3293
-10:25:42 AM,07/05/16,24.22,34.83,96.25,385.77,7.63,3293
-```
+`Date`, `Time`, `TimestampSource`, `Record_ID`, `Boot_ID`, `Uptime_s`, `SampleInterval_ms`, `Temp_C`, `RH_pct`, `Pressure_hPa`, `Altitude_m`, `DewPoint_C`, `GasResistance_ohm`, `GasADC`, `GasVoltage_mV`, `AccelX_mps2`, `AccelY_mps2`, `AccelZ_mps2`, `GyroX_dps`, `GyroY_dps`, `GyroZ_dps`, `Latitude`, `Longitude`, `GPSAltitude_m`, `Speed_kmh`, `Course_deg`, `Satellites`, `HDOP`, `GPSFixValid`, `GPSFixAge_ms`, `WindSpeed_ms`, `WindDirection_deg`, `Rainfall_mm`, `Vcc_mV`, `Battery_mV`, `Battery_pct`, `FreeRAM_B`, `ResetCause`, `SensorStatus`, `RTC_Status`, `SD_Status`, `SD_ErrorCount`, `InvalidReadingCount`, `LoopTime_ms`, and `SD_WriteTime_ms`.
 
-## Example configuration: environmental sensors, accelerometer, GPS, and analogue voltage
+Invalid, timed-out, missing, or unavailable readings are emitted as empty fields by default. Set `USE_EMPTY_FOR_INVALID 0` in `Config.h` if you prefer `NA`.
 
-For a richer mobile logger, use:
+## Metadata
 
-```cpp
-#define LOG_INTERVAL_MS 1000UL
-#define USE_RTC 1
-#define USE_BME280 1
-#define USE_DHT 0
-#define USE_ANALOG_MV 1
-#define USE_ADXL345 1
-#define USE_GPS 1
-#define USE_WIND 0
-```
+Each boot appends static configuration metadata to `INFO.TXT`, including device ID, firmware version, build date, board voltage/clock label, preset ID, enabled sensors, logging interval, sensor intervals, RTC type/availability, start time, SD CS pin, and battery divider values. Static metadata is intentionally not repeated in every CSV row.
 
-Example CSV output:
+## Battery and supply monitoring
+
+`Vcc_mV` is measured from the AVR internal 1.1 V reference where supported. This is the MCU supply voltage, not battery voltage.
+
+`Battery_mV` is measured separately through a divider:
 
 ```text
-Time,Date,TempC,RH%,Pressure_kPa,Altitude_m,DewPoint_C,mV,AccelX_ms2,AccelY_ms2,AccelZ_ms2,GPS_Lat,GPS_Lon,GPS_Alt_m,GPS_Speed_kph
-02:18:04 PM,07/14/26,23.84,41.20,98.77,211.40,9.88,3288,0.031,-0.119,9.772,40.712776,-74.005974,18.4,3.2
-02:18:05 PM,07/14/26,23.85,41.18,98.77,211.28,9.88,3288,0.042,-0.112,9.781,40.712781,-74.005969,18.6,3.5
+Battery+ -> R1 -> ADC pin -> R2 -> GND
+Battery_mV = ADC_mV * (R1 + R2) / R2
 ```
 
-If the RTC is disabled or missing, the `Time` column contains uptime seconds and the `Date` column contains the literal marker `uptime_s`:
+Configure `BATTERY_R1_OHMS`, `BATTERY_R2_OHMS`, and `BATTERY_ADC_REF_MV` in `Config.h`. Keep the ADC pin voltage below the board Vcc. `Battery_pct` is optional because it depends on battery chemistry and calibration.
+
+## Build instructions
+
+See `firmware/ModularLogger/README_BUILD.md` for the required library list, preset selection, and basic test procedure. Install only the libraries required by the selected preset; do not compile every optional library into every build.
+
+## Adding a sensor or CSV field
+
+1. Add a compile-time flag to `Config.h` and, if useful, to one preset file.
+2. Add the sensor object and update function to `Sensors.cpp` behind `#if YOUR_FLAG`.
+3. Expose a lightweight getter in `Sensors.h`.
+4. Add a header string and callback to the descriptor table in `Logger.cpp` behind the same flag.
+5. Do not modify `loggerWriteHeader()` or `loggerWriteRow()`.
+
+## Example CSV output
 
 ```text
-Time,Date,TempC,RH%,DewPoint_C
-0,uptime_s,24.10,36.00,8.15
-10,uptime_s,24.12,35.90,8.10
+Date,Time,TimestampSource,Record_ID,Boot_ID,Uptime_s,SampleInterval_ms,Temp_C,RH_pct,Pressure_hPa,Altitude_m,DewPoint_C,Vcc_mV,FreeRAM_B,ResetCause,SensorStatus,RTC_Status,SD_Status,SD_ErrorCount,InvalidReadingCount,LoopTime_ms,SD_WriteTime_ms
+07/14/26,12:01:05,RTC,1,0,3,10000,24.21,44.50,1012.86,3.24,11.35,3290,812,1,0,0,0,0,0,4,18
 ```
-
-## Adding a new sensor or measurement
-
-1. Add a feature flag near the top of the sketch, for example `#define USE_LIGHT 1`.
-2. Include and instantiate the sensor object inside `#if USE_LIGHT` blocks.
-3. Add fields and a validity flag to `SampleCache`.
-4. Initialize the sensor in `beginSensors()` and print a clear serial status message.
-5. Read the sensor in `readSensors()`. Set the validity flag to `false` when the reading is missing or invalid.
-6. Add a print callback such as `static void printLux(Print &out)` that prints a value or leaves the CSV field blank.
-7. Add a PROGMEM header string and insert `{ hLux, printLux }` into `measurements[]` under `#if USE_LIGHT`.
-
-Do not change `writeHeader()` or `writeRow()` for normal sensor additions. Those functions are intentionally generic.
-
-## Notes
-
-- **Memory usage:** Header labels are stored in flash with `PROGMEM`, status text uses `F()`, and the sketch avoids `String` and heap allocation. The only per-sample RAM structure is `SampleCache`.
-- **CSV formatting:** Missing, invalid, or unavailable readings are emitted as empty fields. This preserves the exact number and order of columns without inventing sentinel values.
-- **Timestamp handling:** With a working RTC, the logger writes 12-hour time and `MM/DD/YY` date. Without an RTC, it writes elapsed uptime seconds and a `Date` marker of `uptime_s`.
-- **SD-card reliability:** The file is flushed after the header and then every `FLUSH_EVERY_N_ROWS` rows. Lower this value to reduce data-loss risk, or raise it to reduce SD writes and power use.
-- **Sampling rates:** Keep `LOG_INTERVAL_MS` slower than the slowest enabled sensor. DHT sensors often need about 2 seconds between reads, GPS parsing must be polled often in `loop()`, and wind/anemometer pulse counting should use interrupts.
-- **Pressure units:** The sketch logs pressure in kPa. Change the callback/header together if you prefer hPa, Pa, atm, or bar.
-- **Altitude:** BME280 altitude is estimated from pressure and the configured sea-level pressure. It is not a replacement for surveyed altitude or GPS altitude.
