@@ -1,0 +1,4 @@
+#undef USE_BMP280
+#define USE_BMP280 1
+#undef CONFIG_PRESET_ID
+#define CONFIG_PRESET_ID "BMP280"
