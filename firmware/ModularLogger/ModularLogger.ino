@@ -23,8 +23,11 @@
 
 // Uncomment the libraries matching your hardware and set the feature flags below.
 // #include <RTClib.h>                 // Adafruit RTClib: DS3231/DS1307
+// #include <Adafruit_BMP280.h>        // BMP280 temperature/pressure
 // #include <Adafruit_BME280.h>        // BME280 temperature/RH/pressure
-// #include <DHT.h>                    // DHT22/DHT11 fallback example
+// #include <Adafruit_BME680.h>        // BME680 temperature/RH/pressure/gas
+// #include <Adafruit_HTU21DF.h>       // GY-21 / HTU21D temperature/RH
+// #include <DHT.h>                    // DHT22/DHT11 low-cost temperature/RH
 // #include <Adafruit_ADXL345_U.h>     // ADXL345 accelerometer
 // #include <TinyGPSPlus.h>            // GPS parser
 // #include <SoftwareSerial.h>         // GPS on Pro Mini without spare UART
@@ -38,17 +41,27 @@
 #define LOG_INTERVAL_MS 10000UL
 #define FLUSH_EVERY_N_ROWS 6
 
-// Set these flags for each hardware variant. See the examples below this file.
+// Set these flags for each hardware variant. See README.md and SENSOR_PRESETS.md.
 #define USE_RTC 1
+#define USE_BMP280 0
 #define USE_BME280 1
+#define USE_BME680 0
+#define USE_GY21 0
 #define USE_DHT 0
+#define USE_DS18B20 0
+#define USE_BH1750 0
+#define USE_MQ_ANALOG 0
+#define USE_MPU6050 0
 #define USE_ANALOG_MV 1
 #define USE_ADXL345 0
 #define USE_GPS 0
 #define USE_WIND 0
 
 // Sensor-specific settings.
+#define BMP280_ADDRESS 0x76
 #define BME280_ADDRESS 0x76
+#define BME680_ADDRESS 0x76
+#define GY21_ADDRESS 0x40
 #define DHT_PIN 2
 #define DHT_TYPE DHT22
 #define ANALOG_MV_PIN A0
@@ -59,6 +72,12 @@
 #define GPS_TX_PIN 3                    // Arduino transmits to GPS RX, often unused
 #define WIND_PIN 2
 #define WIND_MS_PER_PULSE 0.667f        // example calibration placeholder
+#define MQ_ANALOG_PIN A1
+#define LIGHT_I2C_ADDRESS 0x23
+
+#if (USE_BMP280 + USE_BME280 + USE_BME680 + USE_GY21 + USE_DHT) > 1
+#error "Enable only one primary environmental sensor preset at a time."
+#endif
 
 // -----------------------------------------------------------------------------
 // Optional device objects. Keep globals static to avoid heap usage.
@@ -69,10 +88,28 @@ RTC_DS3231 rtc;
 static bool rtcOk = false;
 #endif
 
+#if USE_BMP280
+#include <Adafruit_BMP280.h>
+Adafruit_BMP280 bmp;
+static bool bmpOk = false;
+#endif
+
 #if USE_BME280
 #include <Adafruit_BME280.h>
 Adafruit_BME280 bme;
 static bool bmeOk = false;
+#endif
+
+#if USE_BME680
+#include <Adafruit_BME680.h>
+Adafruit_BME680 bme680;
+static bool bme680Ok = false;
+#endif
+
+#if USE_GY21
+#include <Adafruit_HTU21DF.h>
+Adafruit_HTU21DF gy21;
+static bool gy21Ok = false;
 #endif
 
 #if USE_DHT
@@ -94,6 +131,10 @@ static bool accelOk = false;
 TinyGPSPlus gps;
 SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 static bool gpsOk = false;
+#endif
+
+#if USE_BH1750
+static bool bh1750Ok = false;
 #endif
 
 #if USE_WIND
@@ -118,9 +159,18 @@ struct SampleCache {
   float pressureKPa;
   float altitudeM;
   float dewPointC;
+  bool gasValid;
+  float gasKOhms;
 
   bool analogValid;
   uint16_t milliVolts;
+
+  bool mqValid;
+  uint16_t mqRaw;
+  uint16_t mqMilliVolts;
+
+  bool lightValid;
+  float lux;
 
   bool accelValid;
   float ax;
@@ -229,7 +279,11 @@ static void printRH(Print &out)         { printFloatOrBlank(out, sample.envValid
 static void printPressure(Print &out)   { printFloatOrBlank(out, sample.envValid, sample.pressureKPa, 2); }
 static void printAltitude(Print &out)   { printFloatOrBlank(out, sample.envValid, sample.altitudeM, 2); }
 static void printDewPoint(Print &out)   { printFloatOrBlank(out, sample.envValid, sample.dewPointC, 2); }
+static void printGasKOhms(Print &out)   { printFloatOrBlank(out, sample.gasValid, sample.gasKOhms, 1); }
 static void printMilliVolts(Print &out) { printUIntOrBlank(out, sample.analogValid, sample.milliVolts); }
+static void printMqRaw(Print &out)      { printUIntOrBlank(out, sample.mqValid, sample.mqRaw); }
+static void printMqMilliVolts(Print &out) { printUIntOrBlank(out, sample.mqValid, sample.mqMilliVolts); }
+static void printLux(Print &out)        { printFloatOrBlank(out, sample.lightValid, sample.lux, 1); }
 static void printAccelX(Print &out)     { printFloatOrBlank(out, sample.accelValid, sample.ax, 3); }
 static void printAccelY(Print &out)     { printFloatOrBlank(out, sample.accelValid, sample.ay, 3); }
 static void printAccelZ(Print &out)     { printFloatOrBlank(out, sample.accelValid, sample.az, 3); }
@@ -247,7 +301,11 @@ const char hRH[] PROGMEM = "RH%";
 const char hPressure[] PROGMEM = "Pressure_kPa";
 const char hAltitude[] PROGMEM = "Altitude_m";
 const char hDewPoint[] PROGMEM = "DewPoint_C";
+const char hGas[] PROGMEM = "Gas_kOhms";
 const char hMV[] PROGMEM = "mV";
+const char hMqRaw[] PROGMEM = "MQ_Raw";
+const char hMqMV[] PROGMEM = "MQ_mV";
+const char hLux[] PROGMEM = "Lux";
 const char hAccelX[] PROGMEM = "AccelX_ms2";
 const char hAccelY[] PROGMEM = "AccelY_ms2";
 const char hAccelZ[] PROGMEM = "AccelZ_ms2";
@@ -260,19 +318,31 @@ const char hWind[] PROGMEM = "Wind_ms";
 const Measurement measurements[] PROGMEM = {
   { hTime, printTime },
   { hDate, printDate },
-#if USE_BME280 || USE_DHT
+#if USE_BMP280 || USE_BME280 || USE_BME680 || USE_GY21 || USE_DHT
   { hTempC, printTempC },
+#endif
+#if USE_BME280 || USE_BME680 || USE_GY21 || USE_DHT
   { hRH, printRH },
 #endif
-#if USE_BME280
+#if USE_BMP280 || USE_BME280 || USE_BME680
   { hPressure, printPressure },
   { hAltitude, printAltitude },
 #endif
-#if USE_BME280 || USE_DHT
+#if USE_BME280 || USE_BME680 || USE_GY21 || USE_DHT
   { hDewPoint, printDewPoint },
+#endif
+#if USE_BME680
+  { hGas, printGasKOhms },
 #endif
 #if USE_ANALOG_MV
   { hMV, printMilliVolts },
+#endif
+#if USE_MQ_ANALOG
+  { hMqRaw, printMqRaw },
+  { hMqMV, printMqMilliVolts },
+#endif
+#if USE_BH1750
+  { hLux, printLux },
 #endif
 #if USE_ADXL345
   { hAccelX, printAccelX },
@@ -354,14 +424,38 @@ static void beginRtc() {
 }
 
 static void beginSensors() {
+#if USE_BMP280
+  bmpOk = bmp.begin(BMP280_ADDRESS);
+  Serial.println(bmpOk ? F("BMP280 ready") : F("WARN: BMP280 unavailable"));
+#endif
 #if USE_BME280
   bmeOk = bme.begin(BME280_ADDRESS);
   Serial.println(bmeOk ? F("BME280 ready") : F("WARN: BME280 unavailable"));
+#endif
+#if USE_BME680
+  bme680Ok = bme680.begin(BME680_ADDRESS);
+  if (bme680Ok) {
+    bme680.setTemperatureOversampling(BME680_OS_8X);
+    bme680.setHumidityOversampling(BME680_OS_2X);
+    bme680.setPressureOversampling(BME680_OS_4X);
+    bme680.setGasHeater(320, 150);
+  }
+  Serial.println(bme680Ok ? F("BME680 ready") : F("WARN: BME680 unavailable"));
+#endif
+#if USE_GY21
+  gy21Ok = gy21.begin();
+  Serial.println(gy21Ok ? F("GY-21/HTU21D ready") : F("WARN: GY-21/HTU21D unavailable"));
 #endif
 #if USE_DHT
   dht.begin();
   dhtOk = true; // DHT library has no reliable begin status; reads validate samples.
   Serial.println(F("DHT enabled"));
+#endif
+#if USE_BH1750
+  Wire.beginTransmission(LIGHT_I2C_ADDRESS);
+  Wire.write(0x10); // continuous high-resolution mode
+  bh1750Ok = (Wire.endTransmission() == 0);
+  Serial.println(bh1750Ok ? F("BH1750 light sensor ready") : F("WARN: BH1750 unavailable"));
 #endif
 #if USE_ADXL345
   accelOk = accel.begin();
@@ -395,7 +489,14 @@ static void pollFastSensors() {
 static void readSensors() {
   memset(&sample, 0, sizeof(sample));
 
-#if USE_BME280
+#if USE_BMP280
+  if (bmpOk) {
+    sample.tempC = bmp.readTemperature();
+    sample.pressureKPa = bmp.readPressure() / 1000.0f;
+    sample.altitudeM = bmp.readAltitude(1013.25f);
+    sample.envValid = isfinite(sample.tempC) && isfinite(sample.pressureKPa);
+  }
+#elif USE_BME280
   if (bmeOk) {
     sample.tempC = bme.readTemperature();
     sample.rh = bme.readHumidity();
@@ -403,6 +504,24 @@ static void readSensors() {
     sample.altitudeM = bme.readAltitude(1013.25f);
     sample.dewPointC = dewPointMagnus(sample.tempC, sample.rh);
     sample.envValid = isfinite(sample.tempC) && isfinite(sample.rh) && isfinite(sample.pressureKPa);
+  }
+#elif USE_BME680
+  if (bme680Ok && bme680.performReading()) {
+    sample.tempC = bme680.temperature;
+    sample.rh = bme680.humidity;
+    sample.pressureKPa = bme680.pressure / 1000.0f;
+    sample.altitudeM = bme680.readAltitude(1013.25f);
+    sample.dewPointC = dewPointMagnus(sample.tempC, sample.rh);
+    sample.gasKOhms = bme680.gas_resistance / 1000.0f;
+    sample.envValid = isfinite(sample.tempC) && isfinite(sample.rh) && isfinite(sample.pressureKPa);
+    sample.gasValid = sample.envValid && isfinite(sample.gasKOhms);
+  }
+#elif USE_GY21
+  if (gy21Ok) {
+    sample.tempC = gy21.readTemperature();
+    sample.rh = gy21.readHumidity();
+    sample.dewPointC = dewPointMagnus(sample.tempC, sample.rh);
+    sample.envValid = isfinite(sample.tempC) && isfinite(sample.rh);
   }
 #elif USE_DHT
   if (dhtOk) {
@@ -419,6 +538,24 @@ static void readSensors() {
                      (1023UL * ANALOG_DIVIDER_DENOMINATOR);
   sample.milliVolts = (mv > 65535UL) ? 65535U : (uint16_t)mv;
   sample.analogValid = true;
+#endif
+
+#if USE_MQ_ANALOG
+  sample.mqRaw = analogRead(MQ_ANALOG_PIN);
+  unsigned long mqMv = ((unsigned long)sample.mqRaw * ANALOG_REFERENCE_MV) / 1023UL;
+  sample.mqMilliVolts = (mqMv > 65535UL) ? 65535U : (uint16_t)mqMv;
+  sample.mqValid = true;
+#endif
+
+#if USE_BH1750
+  if (bh1750Ok) {
+    Wire.requestFrom(LIGHT_I2C_ADDRESS, 2);
+  }
+  if (bh1750Ok && Wire.available() == 2) {
+    uint16_t rawLux = ((uint16_t)Wire.read() << 8) | Wire.read();
+    sample.lux = rawLux / 1.2f;
+    sample.lightValid = true;
+  }
 #endif
 
 #if USE_ADXL345
