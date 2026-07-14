@@ -14,16 +14,11 @@ Use a compile-time configured table of measurement descriptors plus small sensor
 | Dynamic registry of sensors/measurements | Flexible, but heap allocation and `String` usage are risky on 2 KB SRAM devices. |
 | Compile-time feature flags | Recommended with the callback table. Unused sensors, libraries, columns, and buffers are removed from the build. |
 
-The firmware in [`firmware/ModularLogger/ModularLogger.ino`](firmware/ModularLogger/ModularLogger.ino) uses feature flags such as `USE_BMP280`, `USE_BME280`, `USE_BME680`, `USE_GY21`, `USE_RTC`, `USE_ADXL345`, and `USE_GPS`. Enabled measurements are compiled into a single `measurements[]` descriptor table. Header generation and data row generation both iterate over that table, guaranteeing matching column order.
+The firmware in [`firmware/ModularLogger/ModularLogger.ino`](firmware/ModularLogger/ModularLogger.ino) uses feature flags such as `USE_BME280`, `USE_RTC`, `USE_ADXL345`, and `USE_GPS`. Enabled measurements are compiled into a single `measurements[]` descriptor table. Header generation and data row generation both iterate over that table, guaranteeing matching column order.
 
 ## Files
 
 - `firmware/ModularLogger/ModularLogger.ino` - complete example firmware.
-- `firmware/ModularLogger/SENSOR_PRESETS.md` - supported low-cost sensor presets and wiring notes for the SPI microSD module and 4-pin I2C RTC.
-
-## Included low-cost sensor presets
-
-Preset environmental sensors include BMP280, BME280, BME680, GY-21/HTU21D/SHT21, and DHT11/DHT22. Other common low-cost presets documented for this logger include analogue voltage/battery dividers, MQ analogue gas boards, BH1750 light sensors, ADXL345, MPU-6050, NEO-6M-style GPS, DS18B20, and reed-switch anemometers. Wiring for the low-cost `3v3/cs/mosi/clk/miso/gnd` microSD board and `GND/VCC/SCL/SDA` RTC board is documented in [`SENSOR_PRESETS.md`](firmware/ModularLogger/SENSOR_PRESETS.md).
 
 ## Example configuration: environmental sensors only
 
@@ -32,10 +27,7 @@ For a BME280 environmental logger with RTC, SD card, and one analogue voltage in
 ```cpp
 #define LOG_INTERVAL_MS 10000UL
 #define USE_RTC 1
-#define USE_BMP280 0
 #define USE_BME280 1
-#define USE_BME680 0
-#define USE_GY21 0
 #define USE_DHT 0
 #define USE_ANALOG_MV 1
 #define USE_ADXL345 0
@@ -58,10 +50,7 @@ For a richer mobile logger, use:
 ```cpp
 #define LOG_INTERVAL_MS 1000UL
 #define USE_RTC 1
-#define USE_BMP280 0
 #define USE_BME280 1
-#define USE_BME680 0
-#define USE_GY21 0
 #define USE_DHT 0
 #define USE_ANALOG_MV 1
 #define USE_ADXL345 1
