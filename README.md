@@ -92,7 +92,7 @@ Configure `BATTERY_R1_OHMS`, `BATTERY_R2_OHMS`, and `BATTERY_ADC_REF_MV` in `Con
 
 ## Build instructions
 
-See `firmware/ModularLogger/README_BUILD.md` for the required library list, preset selection, and basic test procedure. Install only the libraries required by the selected preset; do not compile every optional library into every build.
+See `firmware/ModularLogger/README_BUILD.md` for the required library list, preset selection, and basic test procedure. Install the Arduino `SD` library for every build (`arduino-cli lib install "SD"`), then install only the optional sensor libraries required by the selected preset; do not compile every optional library into every build.
 
 ## Adding a sensor or CSV field
 

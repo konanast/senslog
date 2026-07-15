@@ -15,7 +15,15 @@
 
 ## Required libraries by preset
 
-Always required: Arduino AVR core, `Wire`, `SPI`, and `SD`.
+Always required: Arduino AVR core, built-in `Wire` and `SPI`, plus the Arduino `SD` library. If `#include <SD.h>` fails, install the SD library with `arduino-cli lib install "SD"`.
+
+Minimal setup for every preset:
+
+```bash
+arduino-cli core update-index
+arduino-cli core install arduino:avr
+arduino-cli lib install "SD"
+```
 
 Optional libraries are compiled only when the related preset flag is enabled:
 
@@ -50,12 +58,13 @@ Available presets:
 
 1. Format the microSD card as FAT16/FAT32.
 2. Select a preset in `Config.h`.
-3. Install only the libraries needed by that preset.
-4. Compile for `Arduino Pro or Pro Mini` with the correct processor option: `ATmega328P (3.3V, 8 MHz)` or `ATmega328P (5V, 16 MHz)`.
-5. Upload with the SD card inserted and Serial Monitor at 9600 baud.
-6. Confirm `INFO.TXT` and a sequential `LOG0000.CSV`/`LOG0001.CSV` file are created.
-7. Confirm the CSV header columns exactly match the data columns.
-8. Disconnect and reconnect power to verify the next sequential log file is created without overwriting existing files.
+3. Install the always-required `SD` library plus only the optional sensor libraries needed by that preset.
+4. If compilation fails with `fatal error: SD.h: No such file or directory`, run `arduino-cli lib install "SD"` and compile again.
+5. Compile for `Arduino Pro or Pro Mini` with the correct processor option: `ATmega328P (3.3V, 8 MHz)` or `ATmega328P (5V, 16 MHz)`.
+6. Upload with the SD card inserted and Serial Monitor at 9600 baud.
+7. Confirm `INFO.TXT` and a sequential `LOG0000.CSV`/`LOG0001.CSV` file are created.
+8. Confirm the CSV header columns exactly match the data columns.
+9. Disconnect and reconnect power to verify the next sequential log file is created without overwriting existing files.
 
 ## Example CSV output
 
