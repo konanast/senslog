@@ -262,7 +262,48 @@ uint32_t gpsFixAgeMs() {
   return 0;
 #endif
 }
-bool windSpeedValid() { return s_windValid; } float windSpeedMs() { return s_windMs; }
-bool windDirectionValid() { return s_windDirValid; } float windDirectionDeg() { return s_windDirDeg; }
-bool rainValid() { return s_rainValid; } float rainfallMm() { return s_rainMm; }
+bool windSpeedValid() {
+#if USE_WIND_SPEED
+  return s_windValid;
+#else
+  return false;
+#endif
+}
+float windSpeedMs() {
+#if USE_WIND_SPEED
+  return s_windMs;
+#else
+  return NAN;
+#endif
+}
+
+bool windDirectionValid() {
+#if USE_WIND_DIR
+  return s_windDirValid;
+#else
+  return false;
+#endif
+}
+float windDirectionDeg() {
+#if USE_WIND_DIR
+  return s_windDirDeg;
+#else
+  return NAN;
+#endif
+}
+
+bool rainValid() {
+#if USE_RAIN
+  return s_rainValid;
+#else
+  return false;
+#endif
+}
+float rainfallMm() {
+#if USE_RAIN
+  return s_rainMm;
+#else
+  return NAN;
+#endif
+}
 bool mqValid() { return s_mqValid; } uint16_t mqAdc() { return s_mqAdc; } uint16_t mqVoltageMv() { return s_mqMv; }
