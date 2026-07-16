@@ -51,6 +51,8 @@ static SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
 
 static unsigned long s_lastEnvMs = 0;
 static unsigned long s_lastMotionMs = 0;
+static bool s_envReadAttempted = false;
+static bool s_motionReadAttempted = false;
 static float s_tempC = NAN, s_rh = NAN, s_pressureHpa = NAN, s_altM = NAN, s_dewC = NAN, s_gasOhm = NAN;
 static bool s_tempValid = false, s_rhValid = false, s_pressureValid = false, s_altValid = false, s_dewValid = false, s_gasValid = false;
 static float s_ax = NAN, s_ay = NAN, s_az = NAN, s_gx = NAN, s_gy = NAN, s_gz = NAN;
@@ -63,17 +65,20 @@ static volatile unsigned long s_windPulses = 0;
 static unsigned long s_lastWindMs = 0;
 static float s_windMs = NAN;
 static bool s_windValid = false;
+static bool s_windReadAttempted = false;
 static void windIsr() { s_windPulses++; }
 #endif
 #if USE_RAIN
 static volatile unsigned long s_rainTips = 0;
 static float s_rainMm = 0;
 static bool s_rainValid = false;
+static bool s_rainReadAttempted = false;
 static void rainIsr() { s_rainTips++; }
 #endif
 #if USE_WIND_DIR
 static float s_windDirDeg = NAN;
 static bool s_windDirValid = false;
+static bool s_windDirReadAttempted = false;
 #endif
 
 static float dewPoint(float t, float rh) {
@@ -179,17 +184,37 @@ static void updateMotion() {
 
 void sensorsUpdate() {
   unsigned long now = millis();
-  if (now - s_lastEnvMs >= SENSOR_ENV_INTERVAL_MS) { s_lastEnvMs = now; updateEnvironment(); }
-  if (now - s_lastMotionMs >= SENSOR_MOTION_INTERVAL_MS) { s_lastMotionMs = now; updateMotion(); }
+  if (now - s_lastEnvMs >= SENSOR_ENV_INTERVAL_MS) { s_lastEnvMs = now; updateEnvironment(); s_envReadAttempted = true; }
+  if (now - s_lastMotionMs >= SENSOR_MOTION_INTERVAL_MS) { s_lastMotionMs = now; updateMotion(); s_motionReadAttempted = true; }
 #if USE_WIND_SPEED
-  if (now - s_lastWindMs >= LOG_INTERVAL_MS) { noInterrupts(); unsigned long p = s_windPulses; s_windPulses = 0; interrupts(); s_windMs = (float)p * WIND_MS_PER_PULSE * 1000.0f / (float)(now - s_lastWindMs); s_lastWindMs = now; s_windValid = true; }
+  if (now - s_lastWindMs >= LOG_INTERVAL_MS) { noInterrupts(); unsigned long p = s_windPulses; s_windPulses = 0; interrupts(); s_windMs = (float)p * WIND_MS_PER_PULSE * 1000.0f / (float)(now - s_lastWindMs); s_lastWindMs = now; s_windValid = true; s_windReadAttempted = true; }
 #endif
 #if USE_WIND_DIR
-  s_windDirDeg = ((float)analogRead(WIND_DIR_PIN) * 360.0f) / 1023.0f; s_windDirValid = true;
+  s_windDirDeg = ((float)analogRead(WIND_DIR_PIN) * 360.0f) / 1023.0f; s_windDirValid = true; s_windDirReadAttempted = true;
 #endif
 #if USE_RAIN
-  noInterrupts(); unsigned long tips = s_rainTips; s_rainTips = 0; interrupts(); if (tips) { s_rainMm += tips * RAIN_MM_PER_TIP; s_rainValid = true; }
+  noInterrupts(); unsigned long tips = s_rainTips; s_rainTips = 0; interrupts(); if (tips) { s_rainMm += tips * RAIN_MM_PER_TIP; s_rainValid = true; } s_rainReadAttempted = true;
 #endif
+}
+
+bool sensorsInitialReadingsReady() {
+#if USE_BMP280 || USE_BME280 || USE_BME680 || USE_GY21 || USE_ANALOG_MQ
+  if (!s_envReadAttempted) return false;
+#endif
+#if USE_MPU6050 || USE_ADXL345
+  if (!s_motionReadAttempted) return false;
+#endif
+#if USE_WIND_SPEED
+  if (!s_windReadAttempted) return false;
+#endif
+#if USE_WIND_DIR
+  if (!s_windDirReadAttempted) return false;
+#endif
+#if USE_RAIN
+  if (!s_rainReadAttempted) return false;
+#endif
+  // GPS data may require minutes for a first fix; logging must not wait for it.
+  return true;
 }
 
 bool envHasTemp() { return s_tempValid; } float envTempC() { return s_tempC; }

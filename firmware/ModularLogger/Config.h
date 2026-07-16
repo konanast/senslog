@@ -21,12 +21,17 @@
 
 // Shared defaults. Presets may override these after they undef the value.
 #define SD_CS_PIN 10
-#define LOG_INTERVAL_MS 1000UL
+#define LOG_INTERVAL_MS 10000UL
 #define FLUSH_EVERY_N_ROWS 6
 #define SENSOR_FAST_INTERVAL_MS 200UL
 #define SENSOR_ENV_INTERVAL_MS 10000UL
 #define SENSOR_GPS_INTERVAL_MS 200UL
 #define SENSOR_MOTION_INTERVAL_MS 1000UL
+// 1: do not write CSV rows until every enabled periodic sensor has made its
+// first read attempt.  This prevents startup rows containing only empty
+// sensor fields when a sensor interval is longer than LOG_INTERVAL_MS.
+// 0: begin logging immediately; early rows may contain empty sensor fields.
+#define LOG_WAIT_FOR_INITIAL_SENSOR_READS 1
 #define INFO_FILE_NAME "INFO.TXT"
 #define LOG_PREFIX "LOG"
 #define LOG_EXTENSION ".CSV"

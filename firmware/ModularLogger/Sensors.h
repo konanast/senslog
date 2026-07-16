@@ -5,6 +5,9 @@
 void sensorsBegin();
 void sensorsPollFast();
 void sensorsUpdate();
+// True after enabled periodic sensors have made one read attempt.  A failed
+// sensor still becomes ready so a disconnected device cannot block logging.
+bool sensorsInitialReadingsReady();
 
 bool envHasTemp(); float envTempC();
 bool envHasHumidity(); float envHumidityPct();

@@ -64,6 +64,14 @@ void loop() {
   sensorsUpdate();
 
   unsigned long now = millis();
+#if LOG_WAIT_FOR_INITIAL_SENSOR_READS
+  // Keep nextLogMs unchanged while waiting, so the first completed sensor
+  // sample is written immediately rather than after another log interval.
+  if (!sensorsInitialReadingsReady()) {
+    g_lastLoopTimeMs = (uint16_t)(millis() - loopStart);
+    return;
+  }
+#endif
   if (logFile && (long)(now - nextLogMs) >= 0) {
     g_recordId++;
     bool ok = loggerWriteRow(logFile);

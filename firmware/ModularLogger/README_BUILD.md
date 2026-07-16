@@ -54,6 +54,23 @@ Available presets:
 6. `PRESET_MOBILE_BME680`
 7. `PRESET_WEATHER_STATION`
 
+## Startup logging behaviour
+
+`SENSOR_ENV_INTERVAL_MS` is the interval between environmental-sensor read
+attempts; it is **not** a logging delay by itself.  Because the first attempt
+is deliberately made after that interval, a build whose `LOG_INTERVAL_MS` is
+shorter than `SENSOR_ENV_INTERVAL_MS` would otherwise write startup CSV rows
+with empty environmental fields.
+
+`LOG_WAIT_FOR_INITIAL_SENSOR_READS` in `Config.h` controls this behaviour and
+defaults to `1`.  With `1`, the logger waits until each enabled periodic sensor
+has made its first read attempt, then writes the first row immediately.  A
+failed or disconnected sensor does not block logging forever: its attempt is
+considered complete and its fields remain empty (or `NA`, when configured).
+GPS is excluded from this startup gate because acquiring a satellite fix can
+take much longer.  Set the option to `0` if you explicitly want to record the
+startup period, including empty fields.
+
 ## RTC date/time setting
 
 If a DS3231 reports lost power, a DS1307 is not running, or the RTC returns a year before 2020, the firmware normally falls back to uptime. This build now defaults `RTC_SET_ON_INVALID` to `1`, so an invalid connected RTC is automatically adjusted to the sketch compile time (`__DATE__` / `__TIME__`) during startup. This is convenient after flashing, but the value is the computer compile time, not an internet-synchronized clock. Recompile immediately before uploading for the best result.

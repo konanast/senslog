@@ -131,6 +131,7 @@ void printMetadata(Print &out) {
   out.print(F("LoggingInterval_ms=")); out.println(LOG_INTERVAL_MS);
   out.print(F("EnvInterval_ms=")); out.println(SENSOR_ENV_INTERVAL_MS);
   out.print(F("MotionInterval_ms=")); out.println(SENSOR_MOTION_INTERVAL_MS);
+  out.print(F("WaitForInitialSensorReads=")); out.println(LOG_WAIT_FOR_INITIAL_SENSOR_READS);
   out.print(F("RTC_Type="));
 #if USE_RTC && RTC_TYPE_DS3231
   out.println(F("DS3231"));
