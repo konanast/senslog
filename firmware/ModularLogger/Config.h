@@ -21,7 +21,7 @@
 
 // Shared defaults. Presets may override these after they undef the value.
 #define SD_CS_PIN 10
-#define LOG_INTERVAL_MS 10000UL
+#define LOG_INTERVAL_MS 1000UL
 #define FLUSH_EVERY_N_ROWS 6
 #define SENSOR_FAST_INTERVAL_MS 200UL
 #define SENSOR_ENV_INTERVAL_MS 10000UL
