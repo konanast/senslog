@@ -54,6 +54,12 @@ Available presets:
 6. `PRESET_MOBILE_BME680`
 7. `PRESET_WEATHER_STATION`
 
+## RTC date/time setting
+
+If a DS3231 reports lost power, a DS1307 is not running, or the RTC returns a year before 2020, the firmware normally falls back to uptime. This build now defaults `RTC_SET_ON_INVALID` to `1`, so an invalid connected RTC is automatically adjusted to the sketch compile time (`__DATE__` / `__TIME__`) during startup. This is convenient after flashing, but the value is the computer compile time, not an internet-synchronized clock. Recompile immediately before uploading for the best result.
+
+Leave `RTC_SET_ON_EVERY_BOOT` at `0` for deployed loggers. Set it to `1` only for a one-time clock-setting upload, then set it back to `0` and upload again; otherwise every reset rewrites the RTC to the old compile time.
+
 ## Basic test procedure
 
 1. Format the microSD card as FAT16/FAT32.

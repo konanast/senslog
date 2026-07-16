@@ -32,7 +32,7 @@ Set `USE_RTC 1` and select `RTC_TYPE_DS3231` or `RTC_TYPE_DS1307`. If the RTC is
 
 ## Implemented primary environmental adapters
 
-Enable only one of these primary environmental adapters at a time:
+Enable only one of these primary environmental adapters at a time in the current firmware. Multiple environmental sensors on the same build are possible as a future extension, but the current CSV descriptor and environment getter names intentionally assume one primary environmental source to keep the AVR build small and simple:
 
 | Sensor/module | Flag | Measurements | Library |
 | --- | --- | --- | --- |

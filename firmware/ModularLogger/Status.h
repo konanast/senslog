@@ -15,7 +15,8 @@ enum StatusBits : uint16_t {
   STATUS_SENSOR_GPS = 1 << 6,
   STATUS_SENSOR_WIND = 1 << 7,
   STATUS_SENSOR_RAIN = 1 << 8,
-  STATUS_SENSOR_BATTERY = 1 << 9
+  STATUS_SENSOR_BATTERY = 1 << 9,
+  STATUS_RTC_ADJUSTED = 1 << 10
 };
 
 extern uint16_t g_sensorStatus;
