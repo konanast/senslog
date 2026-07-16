@@ -58,6 +58,8 @@
 #define USE_RTC 1
 #define RTC_TYPE_DS3231 1
 #define RTC_TYPE_DS1307 0
+#define RTC_SET_ON_INVALID 1
+#define RTC_SET_ON_EVERY_BOOT 0
 #define USE_BMP280 0
 #define USE_BME280 0
 #define USE_BME680 0

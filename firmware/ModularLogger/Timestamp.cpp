@@ -12,6 +12,12 @@ static RTC_DS1307 rtc;
 #endif
 static bool s_rtcOk = false;
 static DateTime s_startTime;
+
+static void setRtcToCompileTime() {
+  rtc.adjust(DateTime(__DATE__, __TIME__));
+  g_rtcStatus &= ~STATUS_RTC_INVALID;
+  g_rtcStatus |= STATUS_RTC_ADJUSTED;
+}
 #endif
 
 static void print2(Print &out, uint8_t v) {
@@ -27,18 +33,40 @@ void timestampBegin() {
     g_timestampSource = TS_UPTIME;
     return;
   }
+#if RTC_SET_ON_EVERY_BOOT
+  setRtcToCompileTime();
+#endif
 #if RTC_TYPE_DS3231
   if (rtc.lostPower()) {
     g_rtcStatus |= STATUS_RTC_INVALID;
+#if RTC_SET_ON_INVALID
+    setRtcToCompileTime();
+#else
     g_timestampSource = TS_UPTIME;
     return;
+#endif
+  }
+#else
+  if (!rtc.isrunning()) {
+    g_rtcStatus |= STATUS_RTC_INVALID;
+#if RTC_SET_ON_INVALID
+    setRtcToCompileTime();
+#else
+    g_timestampSource = TS_UPTIME;
+    return;
+#endif
   }
 #endif
   s_startTime = rtc.now();
   if (s_startTime.year() < 2020) {
     g_rtcStatus |= STATUS_RTC_INVALID;
+#if RTC_SET_ON_INVALID
+    setRtcToCompileTime();
+    s_startTime = rtc.now();
+#else
     g_timestampSource = TS_UPTIME;
     return;
+#endif
   }
   g_timestampSource = TS_RTC;
 #else
