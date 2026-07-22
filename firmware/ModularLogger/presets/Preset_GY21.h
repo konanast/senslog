@@ -1,0 +1,4 @@
+#undef USE_GY21
+#define USE_GY21 1
+#undef CONFIG_PRESET_ID
+#define CONFIG_PRESET_ID "GY21"
