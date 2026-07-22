@@ -15,15 +15,22 @@
 
 ## Required libraries by preset
 
-Always required: Arduino AVR core, built-in `Wire` and `SPI`, plus the Arduino `SD` library. If `#include <SD.h>` fails, install the SD library with `arduino-cli lib install "SD"`.
+Always required: the selected Arduino core, built-in `Wire` and `SPI`, plus an
+Arduino-compatible `SD` library for that core. If `#include <SD.h>` fails,
+install the library with `arduino-cli lib install "SD"`.
 
-Minimal setup for every preset:
+Minimal setup for the default Arduino Pro Mini build:
 
 ```bash
 arduino-cli core update-index
 arduino-cli core install arduino:avr
 arduino-cli lib install "SD"
 ```
+
+For ESP32-C6, ESP32-H2, RP2040, or RP2350, install the matching board core
+instead of `arduino:avr`; the exact Fully Qualified Board Name (FQBN) depends
+on the board package and vendor. Keep the required `SD` library compatible
+with that core.
 
 Optional libraries are compiled only when the related preset flag is enabled:
 
@@ -54,6 +61,26 @@ Available presets:
 6. `PRESET_MOBILE_BME680`
 7. `PRESET_WEATHER_STATION`
 
+## Select the main board
+
+Set `LOGGER_BOARD` in `Config.h` before compiling. The default is
+`BOARD_PRO_MINI_3V3`; available values are `BOARD_ESP32_C6`,
+`BOARD_ESP32_H2`, `BOARD_RP2040`, and `BOARD_RP2350`. This setting records the
+board in `INFO.TXT` and supplies conservative 3.3 V battery-ADC defaults. It
+does **not** select the SD pins or install a board core.
+
+All listed boards use 3.3 V I/O. Connect the SD card through the board's
+hardware SPI pins, set `SD_CS_PIN` to the GPIO used for CS, and check the
+pinout of the exact board (for example, XIAO ESP32-C6 or Waveshare H2 Zero)
+before wiring. The default CS value `10` is for the Arduino Pro Mini and must
+be overridden for boards whose selected CS pin differs. Do not connect 5 V
+logic to ESP32 or RP2040/RP2350 pins.
+
+The AVR internal-bandgap `Vcc_mV` measurement is available only on the Pro
+Mini/ATmega328P build. Other boards leave `Vcc_mV` empty; their regulator's
+nominal voltage is metadata, not a measured supply value. `FreeRAM_B` is `-1`
+when the selected core has no portable free-RAM implementation.
+
 ## Startup logging behaviour
 
 `SENSOR_ENV_INTERVAL_MS` is the interval between environmental-sensor read
@@ -83,7 +110,7 @@ Leave `RTC_SET_ON_EVERY_BOOT` at `0` for deployed loggers. Set it to `1` only fo
 2. Select a preset in `Config.h`.
 3. Install the always-required `SD` library plus only the optional sensor libraries needed by that preset.
 4. If compilation fails with `fatal error: SD.h: No such file or directory`, run `arduino-cli lib install "SD"` and compile again.
-5. Compile for `Arduino Pro or Pro Mini` with the correct processor option: `ATmega328P (3.3V, 8 MHz)` or `ATmega328P (5V, 16 MHz)`.
+5. Compile for the board selected by `LOGGER_BOARD`; for the default use `Arduino Pro or Pro Mini` / `ATmega328P (3.3V, 8 MHz)`. Use the matching ESP32-C6, ESP32-H2, RP2040, or RP2350 Arduino core for other selections.
 6. Upload with the SD card inserted and Serial Monitor at 9600 baud.
 7. Confirm `INFO.TXT` and a sequential `LOG0000.CSV`/`LOG0001.CSV` file are created.
 8. Confirm the CSV header columns exactly match the data columns.
@@ -93,6 +120,6 @@ Leave `RTC_SET_ON_EVERY_BOOT` at `0` for deployed loggers. Set it to `1` only fo
 
 ```text
 Date,Time,TimestampSource,Record_ID,Boot_ID,Uptime_s,SampleInterval_ms,Temp_C,RH_pct,Pressure_hPa,Altitude_m,DewPoint_C,Vcc_mV,FreeRAM_B,ResetCause,SensorStatus,RTC_Status,SD_Status,SD_ErrorCount,InvalidReadingCount,LoopTime_ms,SD_WriteTime_ms
-07/14/26,12:01:05,RTC,1,0,3,10000,24.21,44.50,1012.86,3.24,11.35,3290,812,1,0,0,0,0,0,4,18
-07/14/26,12:01:15,RTC,2,0,13,10000,24.22,44.48,1012.84,3.41,11.35,3292,812,1,0,0,0,0,0,4,17
+07/14/26,12:01:10,RTC,1,0,10,1000,24.21,44.50,1012.86,3.24,11.35,3290,812,1,0,0,0,0,0,4,18
+07/14/26,12:01:11,RTC,2,0,11,1000,24.22,44.48,1012.84,3.41,11.35,3292,812,1,0,0,0,0,0,4,17
 ```

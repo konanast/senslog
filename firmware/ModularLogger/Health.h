@@ -4,6 +4,7 @@
 #include "Config.h"
 
 void healthBegin();
+bool vccMeasurementAvailable();
 uint16_t readVccMillivolts();
 uint16_t readBatteryMillivolts();
 uint8_t readBatteryPercent();

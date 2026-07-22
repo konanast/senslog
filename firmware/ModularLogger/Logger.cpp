@@ -42,7 +42,7 @@ static void pGpsFixAge(Print &out) { printUInt(out, gpsValid(), gpsFixAgeMs()); 
 static void pWindSpeed(Print &out) { printFloat(out, windSpeedValid(), windSpeedMs(), 2); }
 static void pWindDir(Print &out) { printFloat(out, windDirectionValid(), windDirectionDeg(), 1); }
 static void pRain(Print &out) { printFloat(out, rainValid(), rainfallMm(), 2); }
-static void pVcc(Print &out) { printUInt(out, true, readVccMillivolts()); }
+static void pVcc(Print &out) { printUInt(out, vccMeasurementAvailable(), readVccMillivolts()); }
 static void pBat(Print &out) { printUInt(out, USE_BATTERY, readBatteryMillivolts()); }
 static void pBatPct(Print &out) { uint8_t pct = readBatteryPercent(); printUInt(out, pct != 255, pct); }
 static void pFreeRam(Print &out) { out.print(freeRamBytes()); }
@@ -127,6 +127,7 @@ void printMetadata(Print &out) {
   out.print(F("BuildDate=")); out.print(F(__DATE__)); out.print(' '); out.println(F(__TIME__));
   out.print(F("BoardVoltage=")); out.println(F(BOARD_VOLTAGE));
   out.print(F("BoardClock=")); out.println(F(BOARD_CLOCK));
+  out.print(F("BoardName=")); out.println(F(BOARD_NAME));
   out.print(F("PresetID=")); out.println(F(CONFIG_PRESET_ID));
   out.print(F("LoggingInterval_ms=")); out.println(LOG_INTERVAL_MS);
   out.print(F("EnvInterval_ms=")); out.println(SENSOR_ENV_INTERVAL_MS);
@@ -143,6 +144,7 @@ void printMetadata(Print &out) {
   out.print(F("RTC_Available=")); out.println(rtcAvailable() ? 1 : 0);
   out.print(F("StartTime=")); printStartTime(out); out.println();
   out.print(F("SD_CS_Pin=")); out.println(SD_CS_PIN);
+  out.print(F("ADC_MaxValue=")); out.println(ADC_MAX_VALUE);
   out.print(F("Battery_R1_ohms=")); out.println(BATTERY_R1_OHMS);
   out.print(F("Battery_R2_ohms=")); out.println(BATTERY_R2_OHMS);
   out.println(F("EnabledSensors="));

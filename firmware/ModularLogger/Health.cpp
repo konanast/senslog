@@ -1,12 +1,24 @@
 #include "Health.h"
+#if defined(ARDUINO_ARCH_AVR)
 #include <avr/wdt.h>
+#endif
 
 static uint8_t s_resetCause = 0;
 
 void healthBegin() {
+#if defined(ARDUINO_ARCH_AVR)
   s_resetCause = MCUSR;
   MCUSR = 0;
   wdt_disable();
+#endif
+}
+
+bool vccMeasurementAvailable() {
+#if defined(__AVR_ATmega328P__) || defined(__AVR_ATmega168__)
+  return true;
+#else
+  return false;
+#endif
 }
 
 uint16_t readVccMillivolts() {
@@ -26,7 +38,7 @@ uint16_t readVccMillivolts() {
 uint16_t readBatteryMillivolts() {
 #if USE_BATTERY
   uint16_t raw = analogRead(BATTERY_PIN);
-  unsigned long adcMv = ((unsigned long)raw * BATTERY_ADC_REF_MV) / 1023UL;
+  unsigned long adcMv = ((unsigned long)raw * BATTERY_ADC_REF_MV) / ADC_MAX_VALUE;
   unsigned long batMv = (adcMv * (BATTERY_R1_OHMS + BATTERY_R2_OHMS)) / BATTERY_R2_OHMS;
   return batMv > 65535UL ? 65535U : (uint16_t)batMv;
 #else
@@ -46,9 +58,13 @@ uint8_t readBatteryPercent() {
 }
 
 int freeRamBytes() {
+#if defined(ARDUINO_ARCH_AVR)
   extern int __heap_start, *__brkval;
   int v;
   return (int)&v - (__brkval == 0 ? (int)&__heap_start : (int)__brkval);
+#else
+  return -1; // Not portable across ESP32/RP2040 Arduino cores.
+#endif
 }
 
 uint8_t resetCause() { return s_resetCause; }

@@ -1,12 +1,13 @@
 /*
-  ModularLogger - production-oriented Arduino Pro Mini data logger.
+  ModularLogger - production-oriented Arduino-compatible data logger.
 
   Wiring summary:
   - microSD module: 3V3 -> 3.3 V supply, CS -> configurable SD_CS_PIN,
     MOSI -> D11, CLK/SCK -> D13, MISO -> D12, GND -> GND.
     Low-cost SD modules may not tolerate 5 V logic. Use a 3.3 V Pro Mini,
     or a module with level shifting when using a 5 V / 16 MHz Pro Mini.
-  - RTC module: GND -> GND, VCC -> rated supply, SCL -> A5, SDA -> A4.
+  - RTC module: GND -> GND, VCC -> rated supply, SCL/SDA -> the selected
+    board's I2C pins (A5/A4 on an Arduino Pro Mini).
   - Battery monitor: battery positive -> R1 -> ADC pin -> R2 -> GND.
     Battery_mV = ADC_mV * (R1 + R2) / R2. Keep ADC pin <= Vcc.
 

@@ -19,9 +19,56 @@
 #define PRESET_MOBILE_BME680 6
 #define PRESET_WEATHER_STATION 7
 
+// Main-board selection.  This selects safe metadata and analogue defaults;
+// it does not choose SD wiring.  Set SD_CS_PIN for the SPI wiring you use.
+#define BOARD_PRO_MINI_3V3 1
+#define BOARD_ESP32_C6 2
+#define BOARD_ESP32_H2 3
+#define BOARD_RP2040 4
+#define BOARD_RP2350 5
+#ifndef LOGGER_BOARD
+#define LOGGER_BOARD BOARD_PRO_MINI_3V3
+#endif
+
+#if LOGGER_BOARD == BOARD_PRO_MINI_3V3
+#define BOARD_NAME "Arduino Pro Mini 3.3V"
+#define BOARD_VOLTAGE "3.3V"
+#define BOARD_CLOCK "8MHz"
+#define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 1023UL
+#elif LOGGER_BOARD == BOARD_ESP32_C6
+#define BOARD_NAME "ESP32-C6"
+#define BOARD_VOLTAGE "3.3V"
+#define BOARD_CLOCK "platform-defined"
+#define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 4095UL
+#elif LOGGER_BOARD == BOARD_ESP32_H2
+#define BOARD_NAME "ESP32-H2"
+#define BOARD_VOLTAGE "3.3V"
+#define BOARD_CLOCK "platform-defined"
+#define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 4095UL
+#elif LOGGER_BOARD == BOARD_RP2040
+#define BOARD_NAME "RP2040"
+#define BOARD_VOLTAGE "3.3V"
+#define BOARD_CLOCK "platform-defined"
+#define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 1023UL
+#elif LOGGER_BOARD == BOARD_RP2350
+#define BOARD_NAME "RP2350"
+#define BOARD_VOLTAGE "3.3V"
+#define BOARD_CLOCK "platform-defined"
+#define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 1023UL
+#else
+#error "Unknown LOGGER_BOARD"
+#endif
+
 // Shared defaults. Presets may override these after they undef the value.
+#ifndef SD_CS_PIN
 #define SD_CS_PIN 10
-#define LOG_INTERVAL_MS 10000UL
+#endif
+#define LOG_INTERVAL_MS 1000UL
 #define FLUSH_EVERY_N_ROWS 6
 #define SENSOR_FAST_INTERVAL_MS 200UL
 #define SENSOR_ENV_INTERVAL_MS 10000UL
@@ -40,15 +87,11 @@
 #define SEA_LEVEL_PRESSURE_HPA 1013.25f
 #define USE_EMPTY_FOR_INVALID 1
 
-// Board declaration for metadata only.
-#define BOARD_VOLTAGE "3.3V-or-5V"
-#define BOARD_CLOCK "8MHz-or-16MHz"
-
 // Battery divider defaults: Vbat -> R1 -> ADC -> R2 -> GND.
 #define BATTERY_PIN A0
 #define BATTERY_R1_OHMS 100000UL
 #define BATTERY_R2_OHMS 100000UL
-#define BATTERY_ADC_REF_MV 3300UL
+#define BATTERY_ADC_REF_MV BOARD_SUPPLY_MV
 #define BATTERY_PCT_ENABLED 0
 #define BATTERY_EMPTY_MV 3300UL
 #define BATTERY_FULL_MV 4200UL
