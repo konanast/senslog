@@ -1,0 +1,4 @@
+#undef USE_BME680
+#define USE_BME680 1
+#undef CONFIG_PRESET_ID
+#define CONFIG_PRESET_ID "BME680"
