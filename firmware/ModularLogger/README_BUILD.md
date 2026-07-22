@@ -64,17 +64,20 @@ Available presets:
 ## Select the main board
 
 Set `LOGGER_BOARD` in `Config.h` before compiling. The default is
-`BOARD_PRO_MINI_3V3`; available values are `BOARD_ESP32_C6`,
-`BOARD_ESP32_H2`, `BOARD_RP2040`, and `BOARD_RP2350`. This setting records the
-board in `INFO.TXT` and supplies conservative 3.3 V battery-ADC defaults. It
-does **not** select the SD pins or install a board core.
+`BOARD_PRO_MINI_3V3`. Select `BOARD_PRO_MINI_5V` for a 5 V / 16 MHz Pro Mini;
+the two options have different metadata and battery-ADC reference defaults.
+Other available values are `BOARD_ESP32_C6`, `BOARD_ESP32_H2`, `BOARD_RP2040`,
+and `BOARD_RP2350`. This setting records the board in `INFO.TXT` and supplies
+nominal supply and battery-ADC defaults. It does **not** select the SD pins or
+install a board core.
 
 All listed boards use 3.3 V I/O. Connect the SD card through the board's
 hardware SPI pins, set `SD_CS_PIN` to the GPIO used for CS, and check the
 pinout of the exact board (for example, XIAO ESP32-C6 or Waveshare H2 Zero)
 before wiring. The default CS value `10` is for the Arduino Pro Mini and must
-be overridden for boards whose selected CS pin differs. Do not connect 5 V
-logic to ESP32 or RP2040/RP2350 pins.
+be overridden for boards whose selected CS pin differs. A 5 V Pro Mini needs
+an SD module with level shifting; do not connect 5 V logic to ESP32 or
+RP2040/RP2350 pins.
 
 The AVR internal-bandgap `Vcc_mV` measurement is available only on the Pro
 Mini/ATmega328P build. Other boards leave `Vcc_mV` empty; their regulator's

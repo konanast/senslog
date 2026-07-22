@@ -22,10 +22,11 @@
 // Main-board selection.  This selects safe metadata and analogue defaults;
 // it does not choose SD wiring.  Set SD_CS_PIN for the SPI wiring you use.
 #define BOARD_PRO_MINI_3V3 1
-#define BOARD_ESP32_C6 2
-#define BOARD_ESP32_H2 3
-#define BOARD_RP2040 4
-#define BOARD_RP2350 5
+#define BOARD_PRO_MINI_5V 2
+#define BOARD_ESP32_C6 3
+#define BOARD_ESP32_H2 4
+#define BOARD_RP2040 5
+#define BOARD_RP2350 6
 #ifndef LOGGER_BOARD
 #define LOGGER_BOARD BOARD_PRO_MINI_3V3
 #endif
@@ -35,6 +36,12 @@
 #define BOARD_VOLTAGE "3.3V"
 #define BOARD_CLOCK "8MHz"
 #define BOARD_SUPPLY_MV 3300UL
+#define ADC_MAX_VALUE 1023UL
+#elif LOGGER_BOARD == BOARD_PRO_MINI_5V
+#define BOARD_NAME "Arduino Pro Mini 5V"
+#define BOARD_VOLTAGE "5V"
+#define BOARD_CLOCK "16MHz"
+#define BOARD_SUPPLY_MV 5000UL
 #define ADC_MAX_VALUE 1023UL
 #elif LOGGER_BOARD == BOARD_ESP32_C6
 #define BOARD_NAME "ESP32-C6"
